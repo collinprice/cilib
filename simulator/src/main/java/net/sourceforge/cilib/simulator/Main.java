@@ -25,6 +25,10 @@ public final class Main {
      * @param args provided arguments.
      */
     public static void main(String[] args) {
+        System.out.println("Please note that this simulator is deprecated.");
+        System.out.println("Not assistance will be given on XML specifications from v0.9");
+        System.out.println("Migrate to the new script based simulator");
+
         if (args.length != 1) {
             System.out.println("Please provide the correct arguments.\nUsage: Simulator <simulation-config.xml>");
             System.exit(1);
