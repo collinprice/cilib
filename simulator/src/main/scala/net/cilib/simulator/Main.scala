@@ -56,6 +56,7 @@ object ScriptEngine {
     val contents = scala.io.Source.fromFile(file).getLines.toList.mkString("\n")
     val runnableScriptTmpl = s"""class Eval {
                                 |  import net.cilib.simulator.Simulation._
+                                |  import net.sourceforge.cilib._
                                 |  def run: Unit = {
                                 |    ${contents}
                                 |  }
