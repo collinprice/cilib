@@ -9,5 +9,5 @@ private.sbt
 .cache
 .project
 
-ifeffit/
+ifeffit/oec
 config/
