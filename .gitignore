@@ -8,3 +8,6 @@ private.sbt
 .classpath
 .cache
 .project
+
+ifeffit/
+config/
