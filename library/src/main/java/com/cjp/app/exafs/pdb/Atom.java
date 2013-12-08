@@ -13,6 +13,12 @@ public class Atom {
 		this.isEXAFS = isEXAFS;
 	}
 	
+	public Atom(Atom copy) {
+		this.atomicSymbol = copy.atomicSymbol;
+		this.point = copy.point.clonePoint3D();
+		this.isEXAFS = copy.isEXAFS;
+	}
+	
 	public boolean isEXAFS() {
 		return this.isEXAFS;
 	}
@@ -31,6 +37,10 @@ public class Atom {
 	
 	public String toString() {
 		return this.atomicSymbol + ": " + point.x + " " + point.y + " " + point.z + " " + (this.isEXAFS ? "1" : "");
+	}
+	
+	public Atom cloneAtom() {
+		return new Atom(this);
 	}
 	
 	public int getAtomicNumber() {

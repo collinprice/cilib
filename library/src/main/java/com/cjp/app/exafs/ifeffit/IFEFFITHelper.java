@@ -15,6 +15,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.StringTokenizer;
 
 import com.cjp.app.exafs.pdb.Atom;
@@ -35,7 +36,7 @@ public class IFEFFITHelper {
 	private static final String IFEFFIT_DIRECTORY = "ifeffit-dir";
 	private static final String TARGET_ATOM = "target-atom";
 	private static final String EXAFS_FILE = "exafs-file";
-	private static final String CONTAINER_DIRECTORY = "exafs-container";
+	private static final String CONTAINER_DIRECTORY = "exafs-container-";
 	private static final String FEFF_INPUT_FILE = "feff.inp";
 	private static final String PROCESS_INPUT_FILE = "process.iff";
 	private static final String FEFF_SCRIPT = "feffer.sh";
@@ -45,6 +46,8 @@ public class IFEFFITHelper {
 	private static final String IFEFFIT_OUTPUT = "my_chi.chi3";
 	private static final String MIN_X = "min-x";
 	private static final String MAX_X = "max-x";
+	
+	private String temp_CONTAINER_DIRECTORY;
 	
 	public IFEFFITHelper(MapParser config, List<Atom> initialAtoms) {
 		
@@ -90,8 +93,12 @@ public class IFEFFITHelper {
 		}
 		
 		// Create container directory.
-		File containerFile = new File(file, CONTAINER_DIRECTORY);
-		if (containerFile.exists()) deleteDirectory(containerFile);
+		File containerFile;
+		do {
+			temp_CONTAINER_DIRECTORY = CONTAINER_DIRECTORY + ((int)(Math.random()*10000));
+			containerFile = new File(file, temp_CONTAINER_DIRECTORY);
+		} while (containerFile.exists());
+		
 		containerFile.mkdir();
 		
 		// Create feff script.
@@ -143,7 +150,13 @@ public class IFEFFITHelper {
 				StringTokenizer tokenizer = new StringTokenizer(exafsFileReader.readLine());
 				if (tokenizer.countTokens() != 2) continue;
 				
-				list.add(new Tuple(Double.parseDouble(tokenizer.nextToken()),Double.parseDouble(tokenizer.nextToken())));
+				try {
+					list.add(new Tuple(Double.parseDouble(tokenizer.nextToken()),Double.parseDouble(tokenizer.nextToken())));					
+				} catch (Exception e) {
+					exafsFileReader.close();
+					return null;
+				}
+				
 			}
 			exafsFileReader.close();
 		} catch (IOException e) {
@@ -155,19 +168,15 @@ public class IFEFFITHelper {
 	
 	public void evaluate(List<Atom> atoms) {
 		
-//		System.out.println("Clean");
-		cleanDirectories();
-		
-//		System.out.println("Generate FEFF Files.");
 		generateFEFFFiles(atoms);
 		runFEFFCommand();
 		
-//		System.out.println("Generate Process Files.");
-		generateProcessFiles();
-		runIFEFFITCommand();
+		if (generateProcessFiles()) {
+			runIFEFFITCommand();
+			calculateRMSD();
+		}
 		
-//		System.out.println("Calculate RMSD");
-		calculateRMSD();
+		cleanDirectories();
 		
 	}
 	
@@ -180,27 +189,9 @@ public class IFEFFITHelper {
 
 	private void cleanDirectory(int index) {
 		
-		File IFEFFITFolder = new File(new File(_config.getString(IFEFFIT_DIRECTORY), CONTAINER_DIRECTORY), ""+index);
+		File IFEFFITFolder = new File(new File(_config.getString(IFEFFIT_DIRECTORY), temp_CONTAINER_DIRECTORY), ""+index);
 		for (File file : IFEFFITFolder.listFiles()) {
-			if (file.getName().contains("feff00")) {
-				file.delete();
-			} else if (file.getName().equals("feff.run")) {
-				file.delete();
-			} else if (file.getName().equals("feff.inp")) {
-				file.delete();
-			} else if (file.getName().equals("files.dat")) {
-				file.delete();
-			} else if (file.getName().equals("nstar.dat")) {
-				file.delete();
-			} else if (file.getName().equals("paths.dat")) {
-				file.delete();
-			} else if (file.getName().equals("phase.pad")) {
-				file.delete();
-			} else if (file.getName().equals("phase.bin")) {
-				file.delete();
-			} else if (file.getName().equals("my_chi.chi3")) {
-				file.delete();
-			} else if (file.getName().equals("process.iff")) {
+			if (!file.getName().contains(_config.getString(EXAFS_FILE)) && !file.getName().contains(IFEFFIT_OUTPUT)) {
 				file.delete();
 			}
 		}
@@ -210,9 +201,21 @@ public class IFEFFITHelper {
 		
 		List< List<Tuple> > ifeffitOutput = new ArrayList< List<Tuple> >();
 		for (int i = 0; i < _targetAtomIndexes.size(); i++) {
-			File IFEFFITFolder = new File(new File(_config.getString(IFEFFIT_DIRECTORY), CONTAINER_DIRECTORY), ""+i);
+			File IFEFFITFolder = new File(new File(_config.getString(IFEFFIT_DIRECTORY), temp_CONTAINER_DIRECTORY), ""+i);
 			File ifeffitResultFile = new File(IFEFFITFolder, IFEFFIT_OUTPUT);
+			
+			if (!ifeffitResultFile.exists()) {
+				System.err.println("IFEFFIT Error. Skipping");
+				generateFailedAttempt();
+				return;
+			}
 			List<Tuple> tupleList = readTupleFile(ifeffitResultFile);
+			if (tupleList == null) {
+				System.err.println("IFEFFIT Error. Skipping");
+				generateFailedAttempt();
+				return;
+			}
+			
 			
 			ifeffitOutput.add(tupleList);
 		}
@@ -261,7 +264,7 @@ public class IFEFFITHelper {
 	private void runIFEFFITCommand() {
 		
 		File file = new File(_config.getString(IFEFFIT_DIRECTORY));
-		File containerFile = new File(file, CONTAINER_DIRECTORY);
+		File containerFile = new File(file, temp_CONTAINER_DIRECTORY);
 		File ifeffitFile = new File(containerFile, IFEFFIT_SCRIPT);
 		
 		try {
@@ -274,26 +277,37 @@ public class IFEFFITHelper {
 		}
 	}
 
-	private void generateProcessFiles() {
+	private boolean generateProcessFiles() {
 		
 		for (int i = 0; i < _targetAtomIndexes.size(); i++) {
-			generateProcessFile(i);
+			if (!generateProcessFile(i)) {
+				System.err.println("generateProcessFile Error.");
+				generateFailedAttempt();
+				return false;
+			}
 		}
+		
+		return true;
 	}
 
-	private void generateProcessFile(int index) {
+	private boolean generateProcessFile(int index) {
 		
 		String processEXAFSFile = "read_data(file=" + _config.getString(EXAFS_FILE) + ",type=chi,group=data)";
 		final String PROCESS_HEADER = "my.k = data.k\nmy.chi = data.chi/(data.k**3)\nnewdata.k = range(0,10.0,0.05)\nnewdata.chi = qinterp(my.k, my.chi, newdata.k)\nguess e = 0.0\nset s = 1.0\nguess s1 = 0.0025";
 		final String PROCESS_FOOTER = "set (kmin = 1.0, kmax =10.0)\nset (kweight=3,dk = 1, kwindow='hanning')\nset (rmin = 0, rmax = 6)\nff2chi(1-100,group = init)\nfeffit(1-100,chi = newdata.chi, group=fit )\nfit3.chi = fit.chi*fit.k**3\nwrite_data(file=my_chi.chi3,fit.k,fit3.chi)\nexit";
 		
-		File IFEFFITFolder = new File(new File(_config.getString(IFEFFIT_DIRECTORY), CONTAINER_DIRECTORY), ""+index);
+		File IFEFFITFolder = new File(new File(_config.getString(IFEFFIT_DIRECTORY), temp_CONTAINER_DIRECTORY), ""+index);
 		List<String> feffFiles = new ArrayList<String>();
 		for (File file : IFEFFITFolder.listFiles()) {
 			if (file.getName().contains("feff00")) {
 				feffFiles.add(file.getName());
 			}
 		}
+		
+		if (feffFiles.size() == 0) {
+			return false;
+		}
+		
 		Collections.sort(feffFiles);
 		
 		PrintWriter writer = null;
@@ -313,6 +327,8 @@ public class IFEFFITHelper {
 		
 		writer.println(PROCESS_FOOTER);
 		writer.close();
+		
+		return true;
 	}
 
 	private void generateFEFFFiles(List<Atom> atoms) {
@@ -326,7 +342,7 @@ public class IFEFFITHelper {
 		
 		PrintWriter writer;
 		try {
-			File IFEFFITFolder = new File(new File(_config.getString(IFEFFIT_DIRECTORY), CONTAINER_DIRECTORY), ""+index);
+			File IFEFFITFolder = new File(new File(_config.getString(IFEFFIT_DIRECTORY), temp_CONTAINER_DIRECTORY), ""+index);
 			writer = new PrintWriter(new File(IFEFFITFolder, FEFF_INPUT_FILE));
 			
 			writer.println(_feffHeader);
@@ -355,7 +371,7 @@ public class IFEFFITHelper {
 	private void runFEFFCommand() {
 		
 		File file = new File(_config.getString(IFEFFIT_DIRECTORY));
-		File containerFile = new File(file, CONTAINER_DIRECTORY);
+		File containerFile = new File(file, temp_CONTAINER_DIRECTORY);
 		File feffFile = new File(containerFile, FEFF_SCRIPT);
 		
 		try {
@@ -378,7 +394,7 @@ public class IFEFFITHelper {
 	
 	public void cleanUp() {
 		
-		File containerDirectory = new File(_config.getString(IFEFFIT_DIRECTORY), CONTAINER_DIRECTORY);
+		File containerDirectory = new File(_config.getString(IFEFFIT_DIRECTORY), temp_CONTAINER_DIRECTORY);
 		if (containerDirectory.exists()) {
 			deleteDirectory(containerDirectory);
 		}
@@ -398,4 +414,8 @@ public class IFEFFITHelper {
 		}
 	}
 	
+	private void generateFailedAttempt() {
+		_lastRMSD = 99999;
+		_lastEXAFSData = null;
+	}
 }

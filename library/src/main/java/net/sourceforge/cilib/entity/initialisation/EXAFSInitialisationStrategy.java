@@ -17,6 +17,8 @@ InitialisationStrategy<E> {
 	private static final long serialVersionUID = 143545623423L;
 	private ProbabilityDistributionFunction random;
 	
+	private static boolean firstInitialise = true;
+	
 	public EXAFSInitialisationStrategy() {
 		this.random = new UniformDistribution();
     }
@@ -41,7 +43,12 @@ InitialisationStrategy<E> {
         Preconditions.checkArgument(atomPositionList.size() == vector.size(), "EXAFS Dimension needs to be " + atomPositionList.size());
         
         for (int i = 0; i < vector.size(); i++) {
-        	vector.setReal(i, atomPositionList.get(i) + random.getRandomNumber());
+        	if (firstInitialise) {
+        		vector.setReal(i, atomPositionList.get(i));
+        		firstInitialise = false;
+        	} else {
+        		vector.setReal(i, atomPositionList.get(i) + random.getRandomNumber());        		
+        	}
         }
 	}
 

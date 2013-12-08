@@ -18,7 +18,7 @@ public class EXAFSEvaluator {
 		
 		MapParser config = new MapParser(configFile);
 		
-		this.pdbHelper = new PDBHelper(config.getString("ifeffit-dir")+"/"+config.getString("amber"), config.getString("ifeffit-dir")+"/"+config.getString("pdb-file"));
+		this.pdbHelper = new PDBHelper(config.getString("ifeffit-dir")+"/"+config.getString("amber"), config.getString("ifeffit-dir")+"/"+config.getString("pdb-file"), config.getList_String("atom-filter"));
 		this.ifeffitHelper = new IFEFFITHelper(config, pdbHelper.getEXAFSAtoms());
 	}
 	

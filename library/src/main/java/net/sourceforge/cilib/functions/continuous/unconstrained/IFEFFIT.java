@@ -22,8 +22,8 @@ public class IFEFFIT extends ContinuousFunction {
 			inputCoords.add(input.doubleValueOf(i));
 		}
 		
-		double rmsd = exafsEvaluator.evaluateAtoms(inputCoords);
-//		System.out.println(rmsd);
-        return rmsd;
+		double fitness = exafsEvaluator.evaluateAtoms(inputCoords);
+		System.out.println(fitness);
+        return fitness;
     }
 }

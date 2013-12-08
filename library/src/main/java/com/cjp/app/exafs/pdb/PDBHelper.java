@@ -1,6 +1,7 @@
 package com.cjp.app.exafs.pdb;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
@@ -11,6 +12,8 @@ import java.util.StringTokenizer;
 public class PDBHelper {
 	
 	List<Atom> _atoms;
+	List<String> _atomFilter;
+	
 	
 	public PDBHelper(String prmtop, String pdb) {
 		
@@ -65,7 +68,7 @@ public class PDBHelper {
 				tokenizer.nextToken();
 				tokenizer.nextToken();
 				tokenizer.nextToken();
-				tokenizer.nextToken();
+//				tokenizer.nextToken();
 				
 				Point3D point = new Point3D();
 				point.x = Double.parseDouble(tokenizer.nextToken());
@@ -85,12 +88,18 @@ public class PDBHelper {
 		}
 	}
 	
+	public PDBHelper(String prmtop, String pdb, List<String> atomFilter) {
+		this(prmtop, pdb);
+		_atomFilter = atomFilter;
+	}
+	
 	public List<Atom> getEXAFSAtoms() {
 		
 		List<Atom> exafsAtoms = new ArrayList<Atom>();
 		for (Atom atom : _atoms) {
-			if (atom.isEXAFS()) {
-				exafsAtoms.add(atom);
+			
+			if (atom.isEXAFS() && _atomFilter.contains(atom.getAtomicSymbol())) {
+				exafsAtoms.add(atom.cloneAtom());
 			}
 		}
 		
@@ -118,10 +127,21 @@ public class PDBHelper {
 			System.exit(0);
 		}
 		
-		List<Atom> atoms = getEXAFSAtoms();
-		for (int i = 0; i < coordList.size(); i += 3) {
-			
-			atoms.get(i/3).setPoint(new Point3D(coordList.get(i),coordList.get(i+1),coordList.get(i+2)));
+		int i = 0;
+		
+//		for (int j = 0; j < _atoms.size(); j++) {
+//			
+//			if (_atoms.get(j).isEXAFS() && !_atomFilter.contains(_atoms.get(j).getAtomicSymbol())) {
+//				 _atoms.get(j).setPoint(new Point3D(coordList.get(i),coordList.get(i+1),coordList.get(i+2)));
+//				i += 3;
+//			}
+//		}
+		
+		for (Atom atom : _atoms) {
+			if (atom.isEXAFS() && _atomFilter.contains(atom.getAtomicSymbol())) {
+				atom.setPoint(new Point3D(coordList.get(i),coordList.get(i+1),coordList.get(i+2)));
+				i += 3;
+			}
 		}
 	}
 	
@@ -155,5 +175,34 @@ public class PDBHelper {
 		
 		System.err.println("Missing mass...");
 		return null;
+	}
+	
+	public static List<Atom> getAtomsFromXYZ(File file) {
+		
+		List<Atom> atoms = new ArrayList<Atom>();
+		
+		try {
+			BufferedReader reader = new BufferedReader(new FileReader(file));
+			
+			String line;
+			while ((line = reader.readLine()) != null) {
+				
+				StringTokenizer tokernizer = new StringTokenizer(line);
+				
+				if (tokernizer.countTokens() != 4) continue;
+				
+				String atomic_symbol = tokernizer.nextToken();
+				Point3D point = new Point3D(Double.parseDouble(tokernizer.nextToken()),Double.parseDouble(tokernizer.nextToken()),Double.parseDouble(tokernizer.nextToken()));
+				
+				atoms.add(new Atom(point,atomic_symbol,true));
+			}
+			
+			reader.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+			System.exit(0);
+		}
+		
+		return atoms;
 	}
 }

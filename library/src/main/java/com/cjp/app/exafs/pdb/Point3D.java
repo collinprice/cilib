@@ -13,4 +13,8 @@ public class Point3D {
 		this.y = y;
 		this.z = z;
 	}
+
+	public Point3D clonePoint3D() {
+		return new Point3D(x,y,z);
+	}
 }

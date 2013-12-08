@@ -7,9 +7,18 @@
 <simulator>
     <algorithms>
         <algorithm id="gbest" class="pso.PSO">
-            <addStoppingCondition class="stoppingcondition.MeasuredStoppingCondition" target="50"/>
+            
+            <!-- Diversity -->
+            <!--<addStoppingCondition class="stoppingcondition.MeasuredStoppingCondition" target="0.1">
+             	<predicate class="stoppingcondition.Minimum"/>
+                <measurement class="measurement.single.diversity.Diversity"/>
+            </addStoppingCondition>-->
+            
+            <!-- Generations -->
+            <addStoppingCondition class="stoppingcondition.MeasuredStoppingCondition" target="30"/>
+            
             <initialisationStrategy class="algorithm.initialisation.ClonedPopulationInitialisationStrategy">
-            	<entityNumber value="10"/>
+            	<entityNumber value="50"/>
                 <entityType class="pso.particle.StandardParticle">
                     <positionInitialisationStrategy class="entity.initialisation.EXAFSInitialisationStrategy"/>
                 </entityType>
@@ -32,7 +41,7 @@
             <algorithm idref="gbest"/>
             <problem idref="spherical"/>
             <measurements idref="fitness" />
-	    <output format="TXT" file="data/exafs-pso.txt" />
+	    <output format="TXT" file="data/exafs-pso-large.txt" />
         </simulation>
     </simulations>
     
