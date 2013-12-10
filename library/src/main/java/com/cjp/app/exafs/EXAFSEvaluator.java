@@ -4,6 +4,7 @@ import java.io.File;
 import java.util.List;
 
 import com.cjp.app.exafs.ifeffit.IFEFFITHelper;
+import com.cjp.app.exafs.pdb.Atom;
 import com.cjp.app.exafs.pdb.PDBHelper;
 import com.cjp.io.MapParser;
 

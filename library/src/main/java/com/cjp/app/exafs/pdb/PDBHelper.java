@@ -55,7 +55,7 @@ public class PDBHelper {
 			prmtopFile.close();
 			
 			BufferedReader pdbFile = new BufferedReader(new FileReader(pdb));
-			pdbFile.readLine(); // Skip line.
+//			pdbFile.readLine(); // Skip line.
 			
 			while((line = pdbFile.readLine()) != null) {
 				

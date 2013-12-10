@@ -7,6 +7,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -169,8 +170,9 @@ public class IFEFFITHelper {
 	public void evaluate(List<Atom> atoms) {
 		
 		generateFEFFFiles(atoms);
+//		System.out.println("run feff");
 		runFEFFCommand();
-		
+//		System.out.println("done feff");
 		if (generateProcessFiles()) {
 			runIFEFFITCommand();
 			calculateRMSD();
@@ -376,6 +378,10 @@ public class IFEFFITHelper {
 		
 		try {
 			Process pr = Runtime.getRuntime().exec("bash " + feffFile.getAbsolutePath());
+			
+			InputStreamReader reader = new InputStreamReader(pr.getInputStream());
+			while(reader.read() != -1){}
+			
 			pr.waitFor();
 		} catch (IOException e) {
 			e.printStackTrace();
